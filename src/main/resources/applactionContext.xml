@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring.xsd">
+
+    <!-- 扫描注解 -->
+    <context:component-scan base-package="SSM01">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+    </context:component-scan>
+
+    <!--引入外部文件 -->
+    <context:property-placeholder location="classpath:jdbc.properties"></context:property-placeholder>
+    <!-- 注册德鲁伊数据源 -->
+    <bean id="dataSource" class="com.alibaba.druid.pool.DruidDataSource">
+    <property name="driverClassName" value="${jdbc.driver}"/>
+    <property name="url" value="${jdbc.url}"/>
+    <property name="username" value="${jdbc.username}"/>
+    <property name="password" value="${jdbc.password}"/>
+    </bean>
+
+    <!-- 处理事务 -->
+    <bean id="tranctionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <aop:config>
+        <!-- 切入点表达式 -->
+        <!-- 其中第一个*代表返回值，第二*代表service下子包，第三个*代表方法名，..表示有无参数均可，
+        有参数时可以是任意类型.“（..）”代表方法参数。 -->
+        <aop:pointcut id="txpoint" expression="execution(* SSM01.service..*(..))"/>
+        <!-- 配置事务增强功能 -->
+        <aop:advisor advice-ref="txadvice" pointcut-ref="txpoint"/>
+    </aop:config>
+
+    <!--配置事务增强 ，事务如何切入 -->
+    <tx:advice id="txadvice" transaction-manager="tranctionManager">
+        <tx:attributes>
+            <tx:method name="*"/>
+            <tx:method name="get*" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- 配置mybatis-->
+    <bean class="org.mybatis.spring.SqlSessionFactoryBean" id="sqlSessionFactoryBean">
+        <!-- 注入数据库 -->
+        <property name="dataSource" ref="dataSource"/>
+        <!-- 配置mybatis-config -->
+        <property name="configLocation" value="classpath:mybatis-config.xml"/>
+        <!-- 配置映射文件 mapper -->
+        <property name="mapperLocations" value="classpath:SSM01/dao/*.xml"></property>
+    </bean>
+
+    <!--使用mybatis-spring框架整合-->
+    <mybatis-spring:scan base-package="SSM01.dao"/>
+</beans>
